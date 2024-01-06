@@ -1,4 +1,7 @@
 import json
+from scipy.spatial import distance_matrix
+from scipy.optimize import linear_sum_assignment
+
 
 import numpy as np
 with open('Input data\level1a.json','r') as f:
@@ -132,17 +135,44 @@ def format_path(slot):
     return [f"r{slot[0]}",*path,f"r{slot[-1]}"]
   
 
+distances = np.array(output)
+
 max_capacity = 600
 
-delivery_slots = create_delivery_slots(distances, orderquantity, max_capacity)
+def calculate_path_cost(path, distances):
+    cost = 0
+    for i in range(len(path) - 1):
+        cost += distances[path[i], path[i + 1]]
+    return cost
 
-for i, slot in enumerate(delivery_slots, 1):
-    print(f"Slot{i}: Orders {slot}")
+
+row_ind, col_ind = linear_sum_assignment(distances)
+
+optimal_order = col_ind.argsort()
+delivery_paths = []
+current_path = [0]  # Starting point
+current_capacity = 0
+
+for i in optimal_order:
+    if current_capacity + orderquantity[i-1] <= max_capacity:
+        current_path.append(i + 1)  # +1 to match your node numbering
+        current_capacity += orderquantity[i]
+    else:
+        delivery_paths.append(current_path + [0])  # Return to starting point
+        current_path = [0, i + 1]
+        current_capacity = orderquantity[i]
+
+if current_path:
+    delivery_paths.append(current_path + [0])
+
+# Print or save the optimized paths
+for i, path in enumerate(delivery_paths, 1):
+    print(f"Path {i}: Orders {path}")
 
 result = {"v0": {}}
-for i, slot in enumerate(delivery_slots):
+for i, path in enumerate(delivery_paths):
     path_key = f"path{i + 1}"
-    nodes = [f"n{node}" if node != 0 else "n0" for node in slot][1:-1]
+    nodes = [f"n{node}" if node != 0 else "n0" for node in path]
     result["v0"][path_key] = [f"r0"] + nodes + [f"r0"]
 
 json_output = json.dumps(result, indent=4)
