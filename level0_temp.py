@@ -1,18 +1,28 @@
 import json
-
+import numpy as np
 from typing import List
 import math
-
-def nearest_neighbour(mat):
-    global route
-    for i in range(len(mat)):
-        if(mat[i]!=0 and ('n'+str(i)) not in route):
-            m=mat[i]
-            break
-    for i in mat:
-        if (i!=0 and i<m and ('n'+str(mat.index(i))) not in route):
-            m=i
-    return mat.index(m)
+res=[]
+def nearest_neighbour(c):
+    global cost
+    adj_vertex = 999
+    min_val = 10000
+    visited[c] = 1
+    print((c + 1), end=" ")
+    res.append(c-1)
+    for k in range(n):
+        if (tsp_g[c][k] != 0) and (visited[k] == 0):
+            if tsp_g[c][k] < min_val:
+                min_val = tsp_g[c][k]
+                adj_vertex = k
+    if min_val != 999:
+        cost = cost + min_val
+    if adj_vertex == 999:
+        adj_vertex = 0
+        print((adj_vertex + 1), end=" ")
+        cost = cost + tsp_g[c][adj_vertex]
+        return
+    nearest_neighbour(adj_vertex)
 
 
 with open('Input data\level0.json','r') as f:
@@ -45,15 +55,23 @@ matrix = fromneigh_dist
 
 output = [[v, *subl] for v, subl in zip(temprest, matrix)]
 #print(output)
-neighbourhood =["r0","n0","n1","n2","n3","n4","n5","n6","n7","n7","n8","n9","n10","n11","n12","n13","n14","n15","n16","n17","n18","n19"]
+neighbourhood =["r0","n0","n1","n2","n3","n4","n5","n6","n7","n8","n9","n10","n11","n12","n13","n14","n15","n16","n17","n18","n19"]
+
+n = 21
+cost = 0
+visited = np.zeros(n, dtype=int)
+tsp_g = np.array(output)
+print("Shortest Path:", end=" ")
+nearest_neighbour(0)
+print()
 
 route =[]
-while(len(route)!=21):
-    i=nearest_neighbour(output)
-    route.append("n"+str(i))
-
 route.append("r0")
-p={"v0":{"Route traversed by steve":route}}
+for i in range (1,len(res)):
+    s='n'+str(res[i])
+    route.append(s)
+route.append("r0")
+p={"v0":{"path":route}}
 json_object = json.dumps(p, indent=4)
-with open("level0_op.json", "w") as outfile:
+with open("level0_output.json", "w") as outfile:
     outfile.write(json_object)
