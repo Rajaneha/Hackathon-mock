@@ -1,53 +1,106 @@
-import numpy as np
 import json
-def nearest_neighbour(c, tsp_g):
-    n = len(tsp_g)
-    visited = set()
-    visited.add(c-1)
-    path = [c-1]
-    total_cost = 0
 
-    for _ in range(n-1):
-        min_val = float('inf')
-        nearest_vertex = None
-        for k in range(n):
-            if tsp_g[c][k] != 0 and k not in visited:
-                if tsp_g[c][k] < min_val:
-                    min_val = tsp_g[c][k]
-                    nearest_vertex = k
-        if nearest_vertex is not None:
-            total_cost += min_val
-            visited.add(nearest_vertex)
-            path.append(nearest_vertex)
-            c = nearest_vertex
-
-    total_cost += tsp_g[path[-1]][path[0]]
-    return total_cost, path
-
-def find_best_solution(tsp_g):
-    n = len(tsp_g)
-    best_cost = float('inf')
-    best_path = None
-
-    for start in range(n):
-        cost, path = nearest_neighbour(start, tsp_g)
-        if cost < best_cost:
-            best_cost = cost
-            best_path = path
-
-    return best_cost, best_path
-with open('Input data\level0.json','r') as f:
+import numpy as np
+with open('Input data\level1a.json','r') as f:
     data = json.load(f)
 
-#print(data)
+
+def create_delivery_slots(distances, order_quantity, max_capacity):
+    n = len(distances)
+    orders = [(i, order_quantity[i]) for i in range(0, n - 1)]
+    orders.sort(key=lambda x: x[1], reverse=True)
+
+    # Kruskal's algorithm for Minimum Spanning Tree
+    edges = []
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            edges.append((i, j, distances[i][j]))
+
+    edges.sort(key=lambda x: x[2])
+    parent = [i for i in range(n)]
+    rank = [0] * n
+
+    def find_set(x):
+        if parent[x] != x:
+            parent[x] = find_set(parent[x])
+        return parent[x]
+
+    def union_sets(x, y):
+        root_x = find_set(x)
+        root_y = find_set(y)
+        if root_x != root_y:
+            if rank[root_x] < rank[root_y]:
+                parent[root_x] = root_y
+            elif rank[root_x] > rank[root_y]:
+                parent[root_y] = root_x
+            else:
+                parent[root_x] = root_y
+                rank[root_y] += 1
+
+    minimum_spanning_tree = []
+    for edge in edges:
+        u, v, weight = edge
+        if find_set(u) != find_set(v):
+            union_sets(u, v)
+            minimum_spanning_tree.append(edge)
+
+    # Extract paths from the minimum spanning tree
+    paths = {i: [] for i in range(n)}
+    for edge in minimum_spanning_tree:
+        u, v, _ = edge
+        paths[u].append(v)
+        paths[v].append(u)
+
+    # Generate delivery slots
+        """
+    delivery_slots = []
+    current_capacity = 0
+    visited = [False] * n
+
+    def dfs(node, slot):
+        if not visited[node]:
+            visited[node] = True
+            slot.append(node)
+            for neighbor in paths[node]:
+                dfs(neighbor, slot)
+
+    for i in range(n):
+        if not visited[i]:
+            current_slot = [0]
+            dfs(i, current_slot)
+            delivery_slots.append(current_slot)"""
+        
+    delivery_slots = []
+    current_slot = [0]
+    current_capacity = 0
+    current_path = 1
+
+    def start_new_path():
+        nonlocal current_slot, current_capacity, current_path
+        current_slot.append(0)  # Return to 0th position
+        delivery_slots.append(current_slot)
+        current_slot = [0, next_order[0]]
+        current_capacity = next_order[1]
+        current_path += 1
+
+    while orders:
+        next_order = orders.pop(0)
+        if current_capacity + next_order[1] <= max_capacity:
+            current_slot.append(next_order[0])
+            current_capacity += next_order[1]
+        else:
+            start_new_path()
+
+    if current_slot:
+        start_new_path()
     
+    return delivery_slots
+  
 fromneigh_dist=[]
 for i in range (0,20):
     i = str(i)
     tempn = data["neighbourhoods"]["n"+i]["distances"]
     fromneigh_dist.append(tempn)
-
-#print("Distance of neighbouurs: ",fromneigh_dist)
 
 fromrest_dist = []
 tempr = data["restaurants"]["r0"]["neighbourhood_distance"]
@@ -55,34 +108,45 @@ fromrest_dist.extend(tempr)
 
 temprest = [0]
 temprest.extend(fromrest_dist)
-#print(temprest)
-#print("Distance of neighbourhood from rest: ",fromrest_dist)
 
+orderquantity = []
+for i in range (0,20):
+    i = str(i)
+    temporder = data["neighbourhoods"]["n"+i]["order_quantity"]
+    orderquantity.append(temporder)
+#print(orderquantity)
 
 fromneigh_dist.insert(0,fromrest_dist)
-#print(fromneigh_dist)
+
 matrix = fromneigh_dist
-#print(matrix)
+
 
 output = [[v, *subl] for v, subl in zip(temprest, matrix)]
+#print(output)
 
 
-tsp_g = np.array(output)
+distances = np.array(output)
 
-best_cost, best_path = find_best_solution(tsp_g)
-print("Best Path:", best_path)
-print("Best Cost:", best_cost)
+def format_path(slot):
+    path = [f"n{neighborhood}" for neighborhood in slot[1:-1]]
+    return [f"r{slot[0]}",*path,f"r{slot[-1]}"]
+  
 
-route =[]
-route.append("r0")
-for i in range (0,len(best_path)-1):
-    if(best_path[i] > 0):
-        s='n'+str(best_path[i]-1)
-    elif(best_path[i]==0):
-        continue
-    route.append(s)
-route.append("r0")
-p={"v0":{"path":route}}
-json_object = json.dumps(p, indent=4)
-with open("level0_output1.json", "w") as outfile:
-    outfile.write(json_object)
+max_capacity = 600
+
+delivery_slots = create_delivery_slots(distances, orderquantity, max_capacity)
+
+for i, slot in enumerate(delivery_slots, 1):
+    print(f"Slot{i}: Orders {slot}")
+
+result = {"v0": {}}
+for i, slot in enumerate(delivery_slots):
+    path_key = f"path{i + 1}"
+    nodes = [f"n{node}" if node != 0 else "n0" for node in slot][1:-1]
+    result["v0"][path_key] = [f"r0"] + nodes + [f"r0"]
+
+json_output = json.dumps(result, indent=4)
+print(json_output)
+
+with open("level1a_testoutput1.json", "w") as outfile:
+    outfile.write(json_output)
