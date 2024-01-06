@@ -67,7 +67,7 @@ print()
 
 route =[]
 route.append("r0")
-for i in range (1,len(res)):
+for i in range (0,len(res)-1):
     s='n'+str(res[i])
     route.append(s)
 route.append("r0")
