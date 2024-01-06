@@ -154,7 +154,7 @@ current_path = [0]  # Starting point
 current_capacity = 0
 
 for i in optimal_order:
-    if current_capacity + orderquantity[i-1] <= max_capacity:
+    if current_capacity + orderquantity[i] <= max_capacity:
         current_path.append(i + 1)  # +1 to match your node numbering
         current_capacity += orderquantity[i]
     else:
