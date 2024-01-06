@@ -76,10 +76,10 @@ for i, slot in enumerate(delivery_slots, 1):
 result = {"v0": {}}
 for i, slot in enumerate(delivery_slots, 1):
     path_key = f"path{i}"
-    
-    result["v0"][path_key] = [f"r0"] + [f"n{node}" for node in slot if node != 0] + [f"r0"]
+    nodes = [f"n{node}" if node != 0 else "n0" for node in slot][1:-1]
+    result["v0"][path_key] = [f"r0"] + nodes + [f"r0"]
 
 json_output = json.dumps(result, indent=4)
 print(json_output)
-with open("level1_output.json", "w") as outfile:
+with open("level1a_output.json", "w") as outfile:
     outfile.write(json_output)
